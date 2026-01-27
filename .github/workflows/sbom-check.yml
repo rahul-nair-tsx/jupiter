@@ -8,7 +8,7 @@ jobs:
       
       - name: Download CLI
         run: |
-          curl -L -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli/nxsbom-cli
+          curl -L -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli
           chmod +x nxsbom-cli
       
       - name: Generate SBOM
