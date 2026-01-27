@@ -15,8 +15,11 @@ jobs:
         run: |
           cat > cli-config.json << EOF
           {
-            "uploadServerUrl": "https://82d5812fe332.ngrok-free.app",
-            "organizationId": "72OO5R9SCO"
+            "agentId": "936ef038-7bef-4288-886d-eeda3e8bb62f",
+            "keyId": "936ef038-7bef-4288-886d-eeda3e8bb62f-k1",
+            "orgId": "72OO5R9SCO",
+            "encPublicKey": "QDZvgFwdhRDVpzVkqi2GjmyDCKbGK7kJcOvDb9lkBAc=",
+            "serverBaseUrl": "https://82d5812fe332.ngrok-free.app/api/"
           }
           EOF
       
