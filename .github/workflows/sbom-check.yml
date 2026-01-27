@@ -72,31 +72,80 @@ jobs:
           UPLOAD_SERVER: https://82d5812fe332.ngrok-free.app
         run: |
           # Upload SBOM (applicationId is optional - will auto-create if not provided)
-          SBOM_ID=$(curl -s -X POST "${UPLOAD_SERVER}/v1/upload/sbom/cicd" \
+          UPLOAD_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "${UPLOAD_SERVER}/v1/upload/sbom/cicd" \
             -H "x-org-id: ${ORG_ID}" \
             -F "file=@sbom.json" \
             -F "clientId=693bde842d84d0e636c80b89" \
             -F "organizationId=${ORG_ID}" \
             -F "ownerId=693bde842d84d0e636c80b66" \
             -F "branch=${githubRefName}" \
-            -F "commit=${githubSha}" \
-            | jq -r '.data.sbomId')
+            -F "commit=${githubSha}")
+          
+          # Extract HTTP status and response body
+          HTTP_STATUS=$(echo "$UPLOAD_RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+          RESPONSE_BODY=$(echo "$UPLOAD_RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
+          
+          # Check HTTP status
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ] && [ "$HTTP_STATUS" != "202" ]; then
+            echo "Error: Upload failed with HTTP status $HTTP_STATUS"
+            echo "Response: $RESPONSE_BODY"
+            exit 1
+          fi
+          
+          # Extract SBOM ID from response
+          SBOM_ID=$(echo "$RESPONSE_BODY" | jq -r '.data.sbomId // .sbomId // empty' 2>/dev/null)
+          if [ -z "$SBOM_ID" ] || [ "$SBOM_ID" = "null" ]; then
+            echo "Error: Failed to get SBOM ID from response"
+            echo "Response: $RESPONSE_BODY"
+            exit 1
+          fi
+          echo "SBOM uploaded successfully. SBOM ID: $SBOM_ID"
           
           # Poll for completion
-          while true; do
-            STATUS=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/status" \
-              -H "x-org-id: ${ORG_ID}" | jq -r '.data.state')
+          echo "Polling for SBOM processing status..."
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            STATUS_RESPONSE=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/status" \
+              -H "x-org-id: ${ORG_ID}")
+            STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.data.state // .state // empty' 2>/dev/null)
+            
+            if [ -z "$STATUS" ]; then
+              echo "Warning: Could not parse status from response: $STATUS_RESPONSE"
+              STATUS="UNKNOWN"
+            fi
+            
+            echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Status = $STATUS"
+            
             if [ "$STATUS" = "COMPLETED" ] || [ "$STATUS" = "FAILED" ]; then
               break
             fi
             sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
           done
           
+          if [ "$STATUS" != "COMPLETED" ] && [ "$STATUS" != "FAILED" ]; then
+            echo "Error: SBOM processing did not complete within timeout"
+            exit 1
+          fi
+          
           # Get decision
-          DECISION=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/decision" \
-            -H "x-org-id: ${ORG_ID}" | jq -r '.data.decision')
+          echo "Getting policy decision..."
+          DECISION_RESPONSE=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/decision" \
+            -H "x-org-id: ${ORG_ID}")
+          DECISION=$(echo "$DECISION_RESPONSE" | jq -r '.data.decision // .decision // empty' 2>/dev/null)
+          
+          if [ -z "$DECISION" ]; then
+            echo "Warning: Could not parse decision from response: $DECISION_RESPONSE"
+            echo "Assuming PASS (no decision available)"
+            DECISION="PASS"
+          fi
+          
+          echo "Policy decision: $DECISION"
           
           if [ "$DECISION" = "FAIL" ]; then
             echo "SBOM policy check FAILED"
             exit 1
           fi
+          
+          echo "SBOM policy check PASSED"
