@@ -1,0 +1,51 @@
+name: SBOM Check
+on: [push, pull_request]
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download CLI
+        run: |
+          curl -L -o nxsbom-cli ${CLI_DOWNLOAD_URL}/nxsbom-cli
+          chmod +x nxsbom-cli
+      
+      - name: Generate SBOM
+        run: ./nxsbom-cli generate-new -t dir -p . -o sbom.json
+      
+      - name: Upload and Check
+        env:
+          ORG_ID: 72OO5R9SCO
+          UPLOAD_SERVER: https://82d5812fe332.ngrok-free.app
+        run: |
+          # Upload SBOM (applicationId is optional - will auto-create if not provided)
+          SBOM_ID=$(curl -s -X POST "${UPLOAD_SERVER}/v1/upload/sbom/cicd" \
+            -H "x-org-id: ${ORG_ID}" \
+            -F "file=@sbom.json" \
+            # applicationId omitted - will auto-create from SBOM metadata
+            -F "clientId=693bde842d84d0e636c80b89" \
+            -F "organizationId=${ORG_ID}" \
+            -F "ownerId=693bde842d84d0e636c80b66" \
+            -F "branch=${{ github.ref_name }}" \
+            -F "commit=${{ github.sha }}" \
+            | jq -r '.data.sbomId')
+          
+          # Poll for completion
+          while true; do
+            STATUS=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/status" \
+              -H "x-org-id: ${ORG_ID}" | jq -r '.data.state')
+            if [ "$STATUS" = "COMPLETED" ] || [ "$STATUS" = "FAILED" ]; then
+              break
+            fi
+            sleep 10
+          done
+          
+          # Get decision
+          DECISION=$(curl -s "${UPLOAD_SERVER}/v1/sbom/${SBOM_ID}/decision" \
+            -H "x-org-id: ${ORG_ID}" | jq -r '.data.decision')
+          
+          if [ "$DECISION" = "FAIL" ]; then
+            echo "SBOM policy check FAILED"
+            exit 1
+          fi
