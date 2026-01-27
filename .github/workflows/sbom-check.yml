@@ -11,8 +11,17 @@ jobs:
           curl -L -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli
           chmod +x nxsbom-cli
       
+      - name: Create CLI config
+        run: |
+          cat > cli-config.json << EOF
+          {
+            "uploadServerUrl": "https://82d5812fe332.ngrok-free.app",
+            "organizationId": "72OO5R9SCO"
+          }
+          EOF
+      
       - name: Generate SBOM
-        run: ./nxsbom-cli generate-new -t dir -p . -o sbom.json
+        run: ./nxsbom-cli generate-new --config cli-config.json --source-type dir --source-path . --output sbom.json
       
       - name: Upload and Check
         env:
