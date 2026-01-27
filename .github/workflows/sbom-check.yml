@@ -8,8 +8,8 @@ jobs:
       
       - name: Download CLI
         run: |
-          echo "Downloading CLI from: https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli/nxsbom-cli"
-          curl -L -f -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli/nxsbom-cli || {
+          echo "Downloading CLI from: https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli"
+          curl -L -f -o nxsbom-cli "https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli" || {
             echo "Error: Failed to download CLI"
             exit 1
           }
