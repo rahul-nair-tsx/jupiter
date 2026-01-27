@@ -8,7 +8,7 @@ jobs:
       
       - name: Download CLI
         run: |
-          curl -L -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli
+          curl -L -o nxsbom-cli https://github.com/rahul-nair-tsx/sbom-cli-tool/releases/download/1.0.0/nxsbom-cli/nxsbom-cli
           chmod +x nxsbom-cli
       
       - name: Create CLI config
@@ -27,7 +27,7 @@ jobs:
         run: |
           APP_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           APP_VERSION="${{ github.sha }}"
-          ./nxsbom-cli generate-new --config cli-config.json --source-type dir --source-path . --app-name "${APP_NAME}" --version "${APP_VERSION}" --output sbom.json
+          ./nxsbom-cli generate-new --config cli-config.json --source-type dir --source-path . --app-name "${APP_NAME}" --app-version "${APP_VERSION}" --output sbom.json
       
       - name: Upload and Check
         env:
@@ -38,12 +38,11 @@ jobs:
           SBOM_ID=$(curl -s -X POST "${UPLOAD_SERVER}/v1/upload/sbom/cicd" \
             -H "x-org-id: ${ORG_ID}" \
             -F "file=@sbom.json" \
-            # applicationId omitted - will auto-create from SBOM metadata
             -F "clientId=693bde842d84d0e636c80b89" \
             -F "organizationId=${ORG_ID}" \
             -F "ownerId=693bde842d84d0e636c80b66" \
-            -F "branch=${{ github.ref_name }}" \
-            -F "commit=${{ github.sha }}" \
+            -F "branch=${githubRefName}" \
+            -F "commit=${githubSha}" \
             | jq -r '.data.sbomId')
           
           # Poll for completion
