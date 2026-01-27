@@ -27,7 +27,7 @@ jobs:
         run: |
           APP_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           APP_VERSION="${{ github.sha }}"
-          ./nxsbom-cli generate-new --config cli-config.json --source-type dir --source-path . --app-name "${APP_NAME}" --app-version "${APP_VERSION}" --output sbom.json
+          ./nxsbom-cli generate-new --config cli-config.json --source-type dir --source-path . --app-name "${APP_NAME}" --version "${APP_VERSION}" --output sbom.json
       
       - name: Upload and Check
         env:
