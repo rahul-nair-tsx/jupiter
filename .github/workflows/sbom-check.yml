@@ -33,7 +33,7 @@ jobs:
             "keyId": "936ef038-7bef-4288-886d-eeda3e8bb62f-k1",
             "orgId": "72OO5R9SCO",
             "encPublicKey": "QDZvgFwdhRDVpzVkqi2GjmyDCKbGK7kJcOvDb9lkBAc=",
-            "serverBaseUrl": "https://82d5812fe332.ngrok-free.app/api/"
+            "serverBaseUrl": "https://200a1fdd2ea3.ngrok-free.app/api/"
           }
           EOF
       
@@ -69,7 +69,7 @@ jobs:
       - name: Upload and Check
         env:
           ORG_ID: 72OO5R9SCO
-          UPLOAD_SERVER: https://82d5812fe332.ngrok-free.app
+          UPLOAD_SERVER: https://200a1fdd2ea3.ngrok-free.app
         run: |
           # Upload SBOM (applicationId is optional - will auto-create if not provided)
           UPLOAD_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "${UPLOAD_SERVER}/api/v1/sbom/upload/cicd" \
